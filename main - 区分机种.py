@@ -3,73 +3,60 @@ from PIL import Image as Img
 import os
 import pprint
 import sys
-import cv2
 import shutil
 
 sys.path.append(os.path.dirname(__file__))
-from tifdiv import div_pages
-from title import title_page,comp
-from title import splitpage
-from analysis_pic import detectTable
-from analysis_pic import extract_part
+from analysis_pic import detectTable,extract_part
 from ocr import tran_text
-from topdf import imgtopdf
 from judge import Judge
+import shutil
+import time
+from chardeel import Rnoise
+from PIL import Image
+from PyPDF2 import PdfFileReader, PdfFileWriter
 
+import fitz
+from tkinter.filedialog import askopenfilename
+from title import dis_title
 
-os.chdir(sys.path[0])
+#  打开PDF文件，生成一个对象
+doc = fitz.open("a.pdf")
+#pdf页数
+page_numbers=doc.pageCount
+
+#%%
+title_index=[]
+part_nums=[]
+for i in range(doc.pageCount):
+    page = doc[i]
+    # 每个尺寸的缩放系数为2，这将为我们生成分辨率提高四倍的图像。
+    zoom_x = 4
+    zoom_y = 4
+    trans = fitz.Matrix(zoom_x, zoom_y).preRotate(0)
+    pix = page.getPixmap(matrix=trans, alpha=False)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    #莱文斯坦距离,两个字符串的编辑距离
+    flag,text=dis_title(img)
+    print("页面{},识别到的文本:{}，是否是封面:{}".format(i,text,flag))
+    if flag==True:
+        title_index.append(i)
+        #输入PIL格式的图片，返回零件号大概区域的截图
+        probably=detectTable(img)
+        #返回零件号精确区域的截图
+        accurate=extract_part(probably)
+        #ocr识别零件号
+        part_No=tran_text(accurate)
+        #查询数据库识别机种
+        models=Judge(part_No)
+
+        part_nums.append([part_No,models])
+        print(part_No,"\n")
 
 path=os.path.dirname(__file__)
-file=os.path.join(path,"tiqu.tif")
-#返回总页数，各page路径列表，各uppage路径列表
-a=div_pages(file)
-page_num=a[0]
-pages=a[1]
-uppages=a[2]
-
-title=title_page(uppages)
-
-#返回封面页码列表
-title_num=title[0]
-
-
-#返回封面路径列表
-title_path=title[1]
-
-#返回各pdf构成分页的图片路径列表
-pdfs=splitpage(pages,title_num)
-pprint.pprint(pdfs)
-
-part_nums=[]
-for index,x in enumerate(title_num):  
-    print(pages[x])
-    #返回零件号大概区域的截图  
-    general_crop=detectTable(pages[x])
-    general_img=os.path.join(os.path.dirname(__file__),"general_crop",'general'+str(index)+'.jpg')
-
-    #cv2.imwrite(general_img,general_crop)
-    #由于cv2.imwrite不支持保存图片到中文路径，用以下方法代替cv2.imwrite
-    cv2.imencode('.jpg', general_crop)[1].tofile(general_img)
-    
-    #返回零件号的精确截图
-    accurate_crop=extract_part(general_crop)
-    name_img=os.path.join(os.path.dirname(__file__),"accurate_crop",'part'+str(index)+'.jpg')
-
-    #保存零件号截图
-    #cv2.imwrite(name_img,accurate_crop)
-    #由于cv2.imwrite不支持保存图片到中文路径，用以下方法代替cv2.imwrite
-    cv2.imencode('.jpg', accurate_crop)[1].tofile(name_img)    
-
-    #识别图片零件号
-    part_num=tran_text(name_img)
-    models=Judge(part_num)
-    part_nums.append([part_num,models])
-
-
 output=os.path.join(path,"output")
 #清空所有文件夹及其内部的文件
-shutil.rmtree(os.path.join(output,"2GW"))
-os.mkdir(os.path.join(output,"2GW"))
+shutil.rmtree(os.path.join(output,"2WB"))
+os.mkdir(os.path.join(output,"2WB"))
 shutil.rmtree(os.path.join(output,"2HX"))
 os.mkdir(os.path.join(output,"2HX"))
 shutil.rmtree(os.path.join(output,"2LD"))
@@ -80,17 +67,35 @@ shutil.rmtree(os.path.join(output,"2SV"))
 os.mkdir(os.path.join(output,"2SV"))
 shutil.rmtree(os.path.join(output,"2YS"))
 os.mkdir(os.path.join(output,"2YS"))
-shutil.rmtree(os.path.join(output,"DS1"))
-os.mkdir(os.path.join(output,"DS1"))
+shutil.rmtree(os.path.join(output,"2VP"))
+os.mkdir(os.path.join(output,"2VP"))
 shutil.rmtree(os.path.join(output,"unknow"))
 os.mkdir(os.path.join(output,"unknow"))
 
 
-print(part_nums)
-print(pdfs)
-for index,x in enumerate(pdfs):
-    for y in part_nums[index][1]:
-        savepath=os.path.join(output,y,part_nums[index][0]+".pdf")
+pdf = PdfFileReader("a.pdf")
+
+#提取pdf的i~f页生成一个新的pdf
+def gen_pdf(pdf,start,end):
+    pdf_new = PdfFileWriter()
+    for i in range(start,end):
+        pdf_new.addPage(pdf.getPage(i))
+    return pdf_new
+
+# %%
+for i,j in enumerate(title_index):
+    if i<len(title_index)-1:
+        start=title_index[i]
+        end=title_index[i+1]-1
+    else:
+        start=title_index[i]
+        end=page_numbers-1
+    part_pdf=gen_pdf(pdf,start,end)
+
+    part_No,models=part_nums[i]
+    for y in models:
+        savepath=os.path.join(output,y,part_No+".pdf")
         print("生成pdf文件:",savepath)
-        imgtopdf(x,savepath)
-    
+        file=open(savepath,'wb')
+        part_pdf.write(file)
+        file.close()

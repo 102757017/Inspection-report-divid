@@ -3,58 +3,53 @@ import os
 import sys
 import cv2
 import numpy as np
-
+from dbnet.dbnet_infer import DBNET,polygon_area
+from utils import get_rotate_crop_image
+from ocr import tran_text
+from PIL import Image
+import Levenshtein
+import fitz
+import numpy as np
+from utils import pdf2img
 
 WIDTH = 762
 QUALITY = 300
 
 
-def comp(obj):
-    #cv2.IMREAD_COLOR表示以彩色模式读入图片
+def dis_title(img):
+    img = img.crop((700, 420, 1550, 700))
+    #PIL to opencv
+    img=cv2.cvtColor(np.asarray(img),cv2.COLOR_RGB2BGR)
     
-    img1 = cv2.imread('sample.png', cv2.IMREAD_COLOR)
-    #由于opencv不支持读取中文路径，用以下方法代替cv2.imread
-    img1 = cv2.imdecode(np.fromfile('sample.png', dtype=np.uint8), 1)
-    
-    img2 = cv2.imread(obj, cv2.IMREAD_COLOR)
-    #由于opencv不支持读取中文路径，用以下方法代替cv2.imread
-    img2 = cv2.imdecode(np.fromfile(obj, dtype=np.uint8), 1)
-    
-    #img2 =cv2.resize(img2,None,fx=0.7, fy=0.7, interpolation = cv2.INTER_CUBIC)
+    text_handle = DBNET(MODEL_PATH="./models/dbnet.onnx")
+    box_list, score_list = text_handle.process(img,short_size=32*6)
+    #print("置信度",score_list)
+    #img2 = draw_bbox(img, box_list)
+    #cv2.imwrite("test.jpg", img2)
 
+    #矩形的面积
+    area=polygon_area(box_list)
+    if len(area)>0:
+        #最大的矩形的索引
+        index=area.index(max(area))
+        crop_img = get_rotate_crop_image(img, box_list[index].astype(np.float32))
+        crop_img=Image.fromarray(cv2.cvtColor(crop_img,cv2.COLOR_BGR2RGB))
+        text=tran_text(crop_img)
+        #print("识别到的文本",text)
+        #莱文斯坦距离,两个字符串的编辑距离
+        distance=Levenshtein.distance(text,"武汉提爱思全兴汽车零都件有限公司")
 
-    
-    #颜色转换函数，BGR->Gray 就可以设置为 cv2.COLOR_BGR2GRAY
-    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    else:
+        distance=Levenshtein.distance("","武汉提爱思全兴汽车零都件有限公司")
 
+    if  distance<5:
+        #print(index,distance,"此页是封面")
+        flag=True
+    else:
+        #print(index,distance)
+        flag=False
+    return flag,text
 
-    #SIFT
-    sift= cv2.xfeatures2d.SIFT_create()
-    #keypoints返回关键点
-    keypoints1 = sift.detect(gray1, None)
-    keypoints2 = sift.detect(gray2, None)
-
-
-    #kp是关键点的列表，des是形状数组
-    kp1,des1 = sift.compute(gray1,keypoints1)
-    kp2,des2 = sift.compute(gray2,keypoints2)
-
-
-    bf = cv2.BFMatcher()
-    #返回k个最佳匹配  
-    matches = bf.knnMatch(des1, des2, k=2)
-
-    matchesMask = [[0,0] for i in range(len(matches))]
-
-
-    #如果对一个列表，既要遍历索引又要遍历元素时可以使用enumerate()
-    for i,(m,n) in enumerate(matches):
-        if m.distance < 0.7*n.distance:
-            matchesMask[i]=[1,0]
-    ppn=matchesMask.count([1,0])
-    rato=ppn/len(matchesMask)
-    return rato
 
 os.chdir(os.path.dirname(__file__))
 
@@ -64,11 +59,13 @@ def title_page(uppages):
     title=[]
     titlepath=[]
     for index,x in enumerate(uppages):
-        rato=comp(x)
-        print(index,"特征点的匹配比率为",rato)
-        if rato>0.2:
+        distance=dis_title(x)
+        if  distance<5:
+            print(index,distance,"此页是封面")
             title.append(index)
             titlepath.append(x)
+        else:
+            print(index,distance)
     return title,titlepath
 
 
@@ -92,3 +89,10 @@ def splitpage(pages_path,titleindex):
     return pdfs
 
 
+
+if __name__=="__main__":
+    #提取pdf的页面转换为PIL格式的图片
+    img=pdf2img("a.pdf",0)
+
+    flag,text=dis_title(img)
+    print("是否是封面",flag)

@@ -5,6 +5,7 @@ import os
 import pprint
 
 def Judge(part_num):
+    part_num=part_num[:-1]+"_"
     os.chdir(os.path.dirname(__file__))
     # 连接到SQLite数据库
     # 数据库文件是test.db
@@ -14,9 +15,9 @@ def Judge(part_num):
     # 创建一个Cursor:
     cursor = conn.cursor()
     #where后面的多个条件用AND和OR连接运算，where前面的字段用逗号连接
-    cursor.execute("select table1.model from table1 where table1.'ts num'=?",(part_num,))
+    cursor.execute("select table1.model from table1 where table1.'ts num'like ?",(part_num,))
     #同一个cursor执行代码，后一个会覆盖前一个
-    
+
     '''cursor只能用一次，即每用完一次之后记录其位置，
     等到下次再取的时候是从游标处再取而不是从头再来，
     fetch完所有的数据之后，这个cursor将不再有使用价值了，即不再能fetch到数据了。
@@ -38,4 +39,6 @@ def Judge(part_num):
         models.append("unknow")
     print(models)
     return models
-#Judge("81660-TBA6-K110-M1-0001")
+
+if __name__=="__main__":
+    Judge("81126-SNA6-A010-29-0001")
