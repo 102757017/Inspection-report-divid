@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from PIL import Image as Img
 import os
+import sys
 import pprint
 
 
@@ -31,8 +32,9 @@ def div_pages(x):
     return i,pages,uppages
 
 
-
-#file=os.path.join(path,"tiqu.tif")
-#a=div_pages(file)
-#pprint.pprint(a)
+if __name__=="__main__":
+    os.chdir(sys.path[0])
+    #file=os.path.join(path,"tiqu.tif")
+    a=div_pages("tiqu.tif")
+    pprint.pprint(a)
 

@@ -31,5 +31,6 @@ def tran_text(file_path):
     return t
 
 
-
-#tran_text(r"D:\check report\accurate_crop\part0.jpg")
+if __name__=="__main__":
+    os.chdir(sys.path[0])
+    tran_text(r"H:\学习资料\编程学习\pathon\基础操作\检查成绩书转PDF\mistakepic\1519729569.jpg")

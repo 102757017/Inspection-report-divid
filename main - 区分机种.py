@@ -17,6 +17,8 @@ from topdf import imgtopdf
 from judge import Judge
 
 
+os.chdir(sys.path[0])
+
 path=os.path.dirname(__file__)
 file=os.path.join(path,"tiqu.tif")
 #返回总页数，各page路径列表，各uppage路径列表
