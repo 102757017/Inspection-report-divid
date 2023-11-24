@@ -3,94 +3,131 @@ from PIL import Image as Img
 import os
 import pprint
 import sys
-import cv2
 import shutil
 
 sys.path.append(os.path.dirname(__file__))
-from tifdiv import div_pages
-from title import title_page,comp
-from title import splitpage
 from analysis_pic import detectTable
-from analysis_pic import extract_part
-from ocr import tran_text
-from topdf import imgtopdf
-from judge import Judge
+from ocr import tran_en,tran_ch
+from judge import Judge_W,Judge_T
+import shutil
+import time
+from PIL import Image
+from PyPDF2 import PdfFileReader, PdfFileWriter
+
+import fitz
+from tkinter.filedialog import askopenfilename
+from title import dis_title
+import re
 
 
-os.chdir(sys.path[0])
-
+#清空output文件夹中所有的pdf
 path=os.path.dirname(__file__)
-file=os.path.join(path,"tiqu.tif")
-#返回总页数，各page路径列表，各uppage路径列表
-a=div_pages(file)
-page_num=a[0]
-pages=a[1]
-uppages=a[2]
-
-title=title_page(uppages)
-
-#返回封面页码列表
-title_num=title[0]
-
-
-#返回封面路径列表
-title_path=title[1]
-
-#返回各pdf构成分页的图片路径列表
-pdfs=splitpage(pages,title_num)
-pprint.pprint(pdfs)
-
-part_nums=[]
-for index,x in enumerate(title_num):  
-    print(pages[x])
-    #返回零件号大概区域的截图  
-    general_crop=detectTable(pages[x])
-    general_img=os.path.join(os.path.dirname(__file__),"general_crop",'general'+str(index)+'.jpg')
-
-    #cv2.imwrite(general_img,general_crop)
-    #由于cv2.imwrite不支持保存图片到中文路径，用以下方法代替cv2.imwrite
-    cv2.imencode('.jpg', general_crop)[1].tofile(general_img)
-    
-    #返回零件号的精确截图
-    accurate_crop=extract_part(general_crop)
-    name_img=os.path.join(os.path.dirname(__file__),"accurate_crop",'part'+str(index)+'.jpg')
-
-    #保存零件号截图
-    #cv2.imwrite(name_img,accurate_crop)
-    #由于cv2.imwrite不支持保存图片到中文路径，用以下方法代替cv2.imwrite
-    cv2.imencode('.jpg', accurate_crop)[1].tofile(name_img)    
-
-    #识别图片零件号
-    part_num=tran_text(name_img)
-    models=Judge(part_num)
-    part_nums.append([part_num,models])
-
-
 output=os.path.join(path,"output")
-#清空所有文件夹及其内部的文件
-shutil.rmtree(os.path.join(output,"2GW"))
-os.mkdir(os.path.join(output,"2GW"))
-shutil.rmtree(os.path.join(output,"2HX"))
-os.mkdir(os.path.join(output,"2HX"))
-shutil.rmtree(os.path.join(output,"2LD"))
-os.mkdir(os.path.join(output,"2LD"))
-shutil.rmtree(os.path.join(output,"2QJ"))
-os.mkdir(os.path.join(output,"2QJ"))
-shutil.rmtree(os.path.join(output,"2SV"))
-os.mkdir(os.path.join(output,"2SV"))
-shutil.rmtree(os.path.join(output,"2YS"))
-os.mkdir(os.path.join(output,"2YS"))
-shutil.rmtree(os.path.join(output,"DS1"))
-os.mkdir(os.path.join(output,"DS1"))
-shutil.rmtree(os.path.join(output,"unknow"))
-os.mkdir(os.path.join(output,"unknow"))
+list_dirs=os.walk(output)
+for root, dirs, files in list_dirs:
+    for f in files:
+        # 分离文件名与扩展名，仅显示txt后缀的文件
+        if os.path.splitext(f)[1]=='.pdf':
+            file_path=os.path.join(root, f)
+            os.remove(file_path)
 
 
-print(part_nums)
-print(pdfs)
-for index,x in enumerate(pdfs):
-    for y in part_nums[index][1]:
-        savepath=os.path.join(output,y,part_nums[index][0]+".pdf")
-        print("生成pdf文件:",savepath)
-        imgtopdf(x,savepath)
-    
+#  打开PDF文件，生成一个对象
+file_name="1.pdf"
+doc = fitz.open(file_name)
+#pdf页数
+page_numbers=doc.pageCount
+
+#%%
+#封面的序列号构成的list
+title_index=[]
+part_nums=[]
+for i in range(doc.pageCount):
+    page = doc[i]
+    # 每个尺寸的缩放系数为2，这将为我们生成分辨率提高四倍的图像。
+    zoom_x = 4
+    zoom_y = 4
+    trans = fitz.Matrix(zoom_x, zoom_y).preRotate(0)
+    pix = page.getPixmap(matrix=trans, alpha=False)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    #莱文斯坦距离,两个字符串的编辑距离
+    flag,text=dis_title(img)
+    print("页面{},识别到的文本:{}，是否是封面:{}".format(i,text,flag))
+    if flag==True:
+        title_index.append(i)
+        #输入PIL格式的图片，返回零件号大概区域的截图
+        probably=detectTable(img)
+
+        #ocr识别图片中的零件号
+        result,img=tran_en(probably)
+        img.save('./general_crop/page{}.jpg'.format(i))
+        print(result)
+        part_ts=result[0][1][0]
+        part_wico=result[1][1][0]
+ 
+        #去掉空格
+        part_wico=re.sub(" ","",part_wico)
+        part_ts=re.sub(" ","",part_ts)
+
+        #去掉.
+        part_wico=re.sub("\.","",part_wico)
+        part_ts=re.sub("\.","",part_ts)
+        
+        #去掉/
+        part_wico=re.sub("/","",part_wico)
+        part_ts=re.sub("/","",part_ts)
+        
+        #将O替换为0
+        part_ts=part_ts.replace("O","0")
+
+        print("log:",part_wico)
+        #去除WICO零件号中的括号，0,C、3也会被误判为括号
+        part_wico=re.findall(r"[^【C0(（<:][0-9A-Z-]+[^3)）>】]", part_wico)[0]
+        #查询数据库识别机种
+        models=Judge_W(part_wico)
+
+        #将TS零件号识别错误的页面筛选出来进行标记
+        models2=Judge_T(part_ts)
+        if models2==["unknow"]:
+            models=["unknow"]
+
+        #替换旧机种为新机种
+        for i,m in enumerate(models):
+            if m=="2LD":
+                models[i]="3LQ"
+            if m=="2QY":
+                models[i]="3QY"
+            if m=="2WB":
+                models[i]="3UW"
+            if m=="2FW":
+                models[i]="3FA"
+                
+        part_nums.append([part_ts,part_wico,models])
+        print(part_ts,part_wico,models,"\n")
+
+
+pdf = PdfFileReader(file_name)
+#提取pdf的i~f页生成一个新的pdf
+def gen_pdf(pdf,start,end):
+    pdf_new = PdfFileWriter()
+    for i in range(start,end):
+        pdf_new.addPage(pdf.getPage(i))
+    return pdf_new
+
+# %%
+for i,j in enumerate(title_index):
+    if i<len(title_index)-1:
+        start=title_index[i]
+        end=title_index[i+1]
+    else:
+        start=title_index[i]
+        end=page_numbers
+    part_pdf=gen_pdf(pdf,start,end)
+
+    part_ts,part_wico,models=part_nums[i]
+    for y in models:
+        savepath=os.path.join(output,y,part_ts+".pdf")
+        print("生成pdf文件:",savepath,part_wico)
+        file=open(savepath,'wb')
+        part_pdf.write(file)
+        file.close()
