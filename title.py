@@ -46,6 +46,7 @@ def detectTable(image):
     #水平膨胀图像，相当于将笔刷沿轮廓外边缘绕行，返回笔刷锚点构成的封闭区
     img2 = thresh_img.copy()
     h_dilate_img = cv2.dilate(img2,h_structure,1)
+    
 
 
     v_structure = cv2.getStructuringElement(cv2.MORPH_RECT,(1,2))
@@ -64,6 +65,7 @@ def detectTable(image):
     第五个参数表示轮廓线的宽度，如果是-1，则为填充模式'''
     img3 = img.copy()
     cv2.drawContours(img3,contours,-1,(0,0,255),2)
+    
 
 
     #cv2.contourArea计算轮廓面积,返回轮廓内像素点的个数，此处将轮廓集按面积排序
@@ -74,6 +76,7 @@ def detectTable(image):
     #print("生成最小矩形:",rect)
     box = np.int0(cv2.boxPoints(rect))
     cv2.drawContours(img3, [box], -1, (0, 255, 0), 3)
+
 
     Xs = [i[0] for i in box]
     Ys = [i[1] for i in box]
@@ -90,13 +93,14 @@ def detectTable(image):
     #cropImg = img[y1:y2, x1:x2]
     cropImg = img[y3:y4, x3:x4]
 
+
     #gray2 = cv2.cvtColor(cropImg,cv2.COLOR_BGR2GRAY)
     #ret2, binary2 = cv2.threshold(gray2,127,255,cv2.THRESH_BINARY)  
     #cv2.imshow("threshold",cropImg)
     #cv2.imwrite('bbb.jpg',cropImg)
 
-    #cv2.waitKey(0)  
-    #cv2.destroyAllWindows()
+    cv2.waitKey(0)  
+    cv2.destroyAllWindows()
     return cropImg
 
 
@@ -172,7 +176,7 @@ def splitpage(pages_path,titleindex):
 
 if __name__=="__main__":
     #提取pdf的页面转换为PIL格式的图片
-    img=pdf2img("1.pdf",0)
+    img=pdf2img("2.pdf",8)
 
     flag,text=dis_title(img)
     print("识别到的文本",text)

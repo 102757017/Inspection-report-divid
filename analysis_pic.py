@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-import cv2
+import cv2 # pigar: required-packages=opencv-python
 import os
 import numpy as np
 from utils import pdf2img
@@ -17,9 +17,13 @@ def detectTable(image):
     cv2.imshow("gray",gray)
 
 
+
+
     #再把图片转换为二值图
     ret, binary = cv2.threshold(gray,127,255,cv2.THRESH_BINARY)  
     cv2.imshow("threshold",binary)
+    #cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
     #图片反色
@@ -78,7 +82,7 @@ def detectTable(image):
     #cv2.minAreaRect主要求得包含点集最小面积的矩形，这个矩形是可以有偏转角度的，可以与图像的边界不平行。
     rect = cv2.minAreaRect(c)
     print("生成最小矩形:",rect)
-    box = np.int0(cv2.boxPoints(rect))
+    box = np.intp(cv2.boxPoints(rect))
     cv2.drawContours(img3, [box], -1, (0, 255, 0), 3)
     cv2.imshow("largest shape",img3)
     #cv2.waitKey(0)  
@@ -113,7 +117,7 @@ def detectTable(image):
 
 if __name__=="__main__":
     #提取pdf的页面转换为PIL格式的图片
-    img=pdf2img("a.pdf",7)
+    img=pdf2img("1.pdf",0)
     #输入PIL格式的图片，返回零件号大概区域的截图
     b=detectTable(img)
 

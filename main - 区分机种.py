@@ -33,22 +33,22 @@ for root, dirs, files in list_dirs:
 
 
 #  打开PDF文件，生成一个对象
-file_name="1.pdf"
+file_name="3.pdf"
 doc = fitz.open(file_name)
 #pdf页数
-page_numbers=doc.pageCount
+page_numbers=len(doc)
 
 #%%
 #封面的序列号构成的list
 title_index=[]
 part_nums=[]
-for i in range(doc.pageCount):
+for i in range(page_numbers):
     page = doc[i]
     # 每个尺寸的缩放系数为2，这将为我们生成分辨率提高四倍的图像。
     zoom_x = 4
     zoom_y = 4
-    trans = fitz.Matrix(zoom_x, zoom_y).preRotate(0)
-    pix = page.getPixmap(matrix=trans, alpha=False)
+    trans = fitz.Matrix(zoom_x, zoom_y)
+    pix = page.get_pixmap(matrix=trans, alpha=False)
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
     #莱文斯坦距离,两个字符串的编辑距离
     flag,text=dis_title(img)

@@ -1,11 +1,12 @@
 import sys
 import os
 #os.system('''pip install paddlepaddle==2.2.2 paddleocr -i https://mirror.baidu.com/pypi/simple''')
-from paddleocr import PaddleOCR, draw_ocr
+from paddleocr import PaddleOCR, draw_ocr # pigar: required-packages=paddlepaddle
 from PIL import Image
 import fitz
 from analysis_pic import detectTable
 import cv2
+import pprint
 
 if getattr(sys, 'frozen', False):
     bundle_dir = sys._MEIPASS
@@ -49,58 +50,64 @@ def tran_en(img):
     # cls:前向时是否启动分类
     result = ocr_en.ocr(img, cls=True)
     result2=[]
-    for index, item in enumerate(result[0]):
-        s=area(item[0])
-        #筛选文本框面积大的检测结果
-        if s>10000:
-            result2.append(item)
-            
-    for item in result2:
-        print(item)
+    if result[0] !=None:
+        print(result)
+        for index, item in enumerate(result[0]):
+            s=area(item[0])
+            #筛选文本框面积大的检测结果
+            if s>10000:
+                result2.append(item)
+                
+        for item in result2:
+            print(item)
 
-    # 保存识别结果的图片
-    boxes = [line[0] for line in result2]
-    txts = [line[1][0] for line in result2]
-    scores = [line[1][1] for line in result2]
-    im_show = draw_ocr(img, boxes, txts, scores, font_path='/path/to/PaddleOCR/doc/simfang.ttf')
-    im_show = Image.fromarray(im_show)
-    return result2,im_show
+        # 保存识别结果的图片
+        boxes = [line[0] for line in result2]
+        txts = [line[1][0] for line in result2]
+        scores = [line[1][1] for line in result2]
+        im_show = draw_ocr(img, boxes, txts, scores, font_path='/path/to/PaddleOCR/doc/simfang.ttf')
+        im_show = Image.fromarray(im_show)
+        return result2,im_show
+    else:
+        return "",None
 
 
 def tran_ch(img):
     # cls:前向时是否启动分类
     result = ocr_ch.ocr(img, cls=True)
     result2=[]
-    for index, item in enumerate(result[0]):
-        s=area(item[0])
-        #筛选文本框面积大的检测结果
-        if s>11000:
-            result2.append(item)
-            
-    for item in result2:
-        print(item)
+    if result[0] !=None:
+        for index, item in enumerate(result[0]):
+            s=area(item[0])
+            #筛选文本框面积大的检测结果
+            if s>11000:
+                result2.append(item)
+                
+        for item in result2:
+            print(item)
 
-    # 保存识别结果的图片
-    boxes = [line[0] for line in result2]
-    txts = [line[1][0] for line in result2]
-    scores = [line[1][1] for line in result2]
-    im_show = draw_ocr(img, boxes, txts, scores, font_path='/path/to/PaddleOCR/doc/simfang.ttf')
-    im_show = Image.fromarray(im_show)
-    return result2,im_show
-
+        # 保存识别结果的图片
+        boxes = [line[0] for line in result2]
+        txts = [line[1][0] for line in result2]
+        scores = [line[1][1] for line in result2]
+        im_show = draw_ocr(img, boxes, txts, scores, font_path='/path/to/PaddleOCR/doc/simfang.ttf')
+        im_show = Image.fromarray(im_show)
+        return result2,im_show
+    else:
+        return "",None    
 
 
 if __name__=="__main__":
     #  打开PDF文件，生成一个对象
-    file_name="1.pdf"
+    file_name="2.pdf"
     doc = fitz.open(file_name)
     #第一页
-    page = doc[15]
+    page = doc[8]
     # 每个尺寸的缩放系数为2，这将为我们生成分辨率提高四倍的图像。
     zoom_x = 4
     zoom_y = 4  
-    trans = fitz.Matrix(zoom_x, zoom_y).preRotate(0)
-    pix = page.getPixmap(matrix=trans, alpha=False)
+    trans = fitz.Matrix(zoom_x, zoom_y).prerotate(0)
+    pix = page.get_pixmap(matrix=trans, alpha=False)
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
     #输入PIL格式的图片，返回零件号大概区域的截图
     probably=detectTable(img)
