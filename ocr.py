@@ -7,6 +7,7 @@ import fitz
 from analysis_pic import detectTable
 import cv2
 import pprint
+import logging
 
 if getattr(sys, 'frozen', False):
     bundle_dir = sys._MEIPASS
@@ -15,6 +16,9 @@ else:
 print("工作目录：",bundle_dir)
 os.chdir(bundle_dir)
 
+
+# 设置日志级别为ERROR，来抑制debug信息
+logging.getLogger('ppocr').setLevel(logging.WARNING)
 
 #输入矩形坐标例如[[101.0, 50.0], [585.0, 49.0], [585.0, 83.0], [101.0, 84.0]]，计算矩形面积
 def area(rectangle):
