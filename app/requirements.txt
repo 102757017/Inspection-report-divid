@@ -1,0 +1,8 @@
+paddleocr
+Pillow
+pymupdf
+PyPDF2
+Shapely
+opencv_python
+python_Levenshtein
+numpy
