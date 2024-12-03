@@ -1,2 +1,0 @@
-opencv不支持中文路径
-reportlab不支持中文路径
