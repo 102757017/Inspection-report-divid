@@ -33,7 +33,7 @@ for root, dirs, files in list_dirs:
 
 
 #  打开PDF文件，生成一个对象
-file_name="2.pdf"
+file_name="5.pdf"
 doc = fitz.open(file_name)
 #pdf页数
 page_numbers=len(doc)
@@ -99,8 +99,6 @@ for i in range(page_numbers):
                 models[i]="3QY"
             if m=="2YC":
                 models[i]="3YB"
-            if m=="2FW":
-                models[i]="3FA"
 
                 
         part_nums.append([part_ts,part_wico,models])
