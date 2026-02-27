@@ -11,7 +11,7 @@ def Judge_W(part_num):
     # 连接到SQLite数据库
     # 数据库文件是test.db
     # 如果文件不存在，会自动在当前目录创建:
-    conn = sqlite3.connect('F:\hewei\soft\check report5\Partlist.db')
+    conn = sqlite3.connect(r'E:\python\check_report\app\Partlist.db')
 
     # 创建一个Cursor:
     cursor = conn.cursor()
@@ -48,7 +48,7 @@ def Judge_T(part_num):
     # 连接到SQLite数据库
     # 数据库文件是test.db
     # 如果文件不存在，会自动在当前目录创建:
-    conn = sqlite3.connect('F:\hewei\soft\check report5\Partlist.db')
+    conn = sqlite3.connect(r'E:\python\check_report\app\Partlist.db')
 
     # 创建一个Cursor:
     cursor = conn.cursor()
@@ -81,5 +81,5 @@ def Judge_T(part_num):
 
 
 if __name__=="__main__":
-    models=Judge_W("23-4734660-2")
+    models=Judge_W("23-4855440-2")
     print(models)
